@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:local="clr-namespace:BusyLights" x:Class="BusyLights.BusyLightsPage">
+    <StackLayout>
+        <Button Text="Register" x:Name="registerButton" Margin="20" />
+        <ActivityIndicator x:Name="pairingIndicator" />
+        <Button Text="Busy" x:Name="busyButton" Margin="20" />
+        <Button Text="Free" x:Name="freeButton" Margin="20" />
+        <Button Text="Turn Off" x:Name="offButton" Margin="20" />
+    </StackLayout>
+</ContentPage>
