@@ -14,6 +14,8 @@ namespace BusyLights
         {
             InitializeComponent();
 
+            MessagingCenter.Subscribe<LightMessage>(this, "turn_light_on", async (LightMessage obj) => await TurnLightRed());
+
             registerButton.Clicked += async (s, e) =>
             {
                 var bridgeLocator = new HttpBridgeLocator();
@@ -65,37 +67,7 @@ namespace BusyLights
             };
 
             busyButton.Clicked += async (sender, e) =>
-            {
-                var bridgeLocator = new HttpBridgeLocator();
-                var ips = await bridgeLocator.LocateBridgesAsync(TimeSpan.FromSeconds(30));
-
-                var client = new LocalHueClient(ips.First().IpAddress);
-
-                if (!client.IsInitialized && !string.IsNullOrEmpty(Settings.HueKey))
-                {
-                    client.Initialize(Settings.HueKey);
-                }
-                else
-                {
-                    await DisplayAlert("Not paired", "App not paired to a bridge, hit the register button.", "OK");
-
-                    return;
-                }
-
-                var command = new LightCommand();
-                var redColor = new RGBColor(220, 82, 74);
-                command.TurnOn().SetColor(redColor);
-
-                var allLights = await client.GetLightsAsync();
-
-                foreach (var light in allLights)
-                {
-                    if (light.Name.Equals("hue go 1", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await client.SendCommandAsync(command, new[] { light.Id });
-                    }
-                }
-            };
+                await TurnLightRed();
 
             freeButton.Clicked += async (sender, e) =>
             {
@@ -163,6 +135,39 @@ namespace BusyLights
 
                 }
             };
+        }
+
+        async Task TurnLightRed()
+        {
+            var bridgeLocator = new HttpBridgeLocator();
+            var ips = await bridgeLocator.LocateBridgesAsync(TimeSpan.FromSeconds(30));
+
+            var client = new LocalHueClient(ips.First().IpAddress);
+
+            if (!client.IsInitialized && !string.IsNullOrEmpty(Settings.HueKey))
+            {
+                client.Initialize(Settings.HueKey);
+            }
+            else
+            {
+                await DisplayAlert("Not paired", "App not paired to a bridge, hit the register button.", "OK");
+
+                return;
+            }
+
+            var command = new LightCommand();
+            var redColor = new RGBColor(220, 82, 74);
+            command.TurnOn().SetColor(redColor);
+
+            var allLights = await client.GetLightsAsync();
+
+            foreach (var light in allLights)
+            {
+                if (light.Name.Equals("hue go 1", StringComparison.OrdinalIgnoreCase))
+                {
+                    await client.SendCommandAsync(command, new[] { light.Id });
+                }
+            }
         }
     }
 }

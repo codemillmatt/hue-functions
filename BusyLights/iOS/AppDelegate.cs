@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
 
 using Foundation;
@@ -7,13 +7,18 @@ using UIKit;
 
 using WindowsAzure.Messaging;
 
+
+using Q42.HueApi;
+using Q42.HueApi.ColorConverters;
+using Q42.HueApi.ColorConverters.Original;
+
 namespace BusyLights.iOS
 {
     [Register("AppDelegate")]
     public partial class AppDelegate : global::Xamarin.Forms.Platform.iOS.FormsApplicationDelegate
     {
         SBNotificationHub Hub { get; set; }
-        const string ConnectionString = "Endpoint=sb://busylights.servicebus.windows.net/;SharedAccessKeyName=DefaultListenSharedAccessSignature;SharedAccessKey=";
+        const string ConnectionString = "Endpoint=sb://busylights.servicebus.windows.net/;SharedAccessKeyName=DefaultListenSharedAccessSignature;SharedAccessKey=C4qfCLSfVZM1oqvjwuawOVRhXOXi31xdOX47nxyipLA=";
         const string NotificationHubPath = "BusyLights";
 
         public override bool FinishedLaunching(UIApplication app, NSDictionary options)
@@ -21,10 +26,6 @@ namespace BusyLights.iOS
             global::Xamarin.Forms.Forms.Init();
 
             LoadApplication(new App());
-
-            //var settings = UIUserNotificationSettings.GetSettingsForTypes(UIUserNotificationType.Alert | UIUserNotificationType.Badge | UIUserNotificationType.Sound, new NSSet());
-
-            //UIApplication.SharedApplication.RegisterUserNotificationSettings(settings);
 
             UIApplication.SharedApplication.RegisterForRemoteNotifications();
 
@@ -53,12 +54,58 @@ namespace BusyLights.iOS
 
         public override void ReceivedRemoteNotification(UIApplication application, NSDictionary userInfo)
         {
-            //base.ReceivedRemoteNotification(application, userInfo);
+            Xamarin.Forms.Device.BeginInvokeOnMainThread(async () => await TurnLightRed());
         }
 
         public override void DidReceiveRemoteNotification(UIApplication application, NSDictionary userInfo, Action<UIBackgroundFetchResult> completionHandler)
         {
+            Settings.IWasHere = Settings.IWasHere + 1;
+
             //base.DidReceiveRemoteNotification(application, userInfo, completionHandler);
+
+            //var lightMessage = new LightMessage();
+            //Xamarin.Forms.MessagingCenter.Send(lightMessage, "turn_light_on");
+
+            Xamarin.Forms.Device.BeginInvokeOnMainThread(async () => await TurnLightRed());
+
+            completionHandler(UIBackgroundFetchResult.NewData);
+        }
+
+        async Task TurnLightRed()
+        {
+
+
+            Settings.IWasHere = Settings.IWasHere + 1;
+
+            var bridgeLocator = new HttpBridgeLocator();
+            var ips = await bridgeLocator.LocateBridgesAsync(TimeSpan.FromSeconds(30));
+
+            var client = new LocalHueClient(ips.First().IpAddress);
+
+            if (!client.IsInitialized && !string.IsNullOrEmpty(Settings.HueKey))
+            {
+                client.Initialize(Settings.HueKey);
+            }
+            else
+            {
+                //await DisplayAlert("Not paired", "App not paired to a bridge, hit the register button.", "OK");
+
+                return;
+            }
+
+            var command = new LightCommand();
+            var redColor = new RGBColor(220, 82, 74);
+            command.TurnOn().SetColor(redColor);
+
+            var allLights = await client.GetLightsAsync();
+
+            foreach (var light in allLights)
+            {
+                if (light.Name.Equals("hue go 1", StringComparison.OrdinalIgnoreCase))
+                {
+                    await client.SendCommandAsync(command, new[] { light.Id });
+                }
+            }
         }
     }
 }
